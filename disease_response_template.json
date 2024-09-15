@@ -1,0 +1,23 @@
+{
+   "name":"",
+   "statistics": {
+     "total_cases":20000.0,
+     "recovery_rate":"50%",
+     "mortality_rate":"50%"
+   },
+   "recovery_options":{
+      "Surgery":"",
+      "Radiation Therapy":"",
+      "Chemotherapy":"",
+      "Immunotherapy":"",
+      "Hormone Therapy":""
+   },
+   "medication": {
+       "name": "",
+       "side_effects": [
+        "",
+        ""
+       ],
+       "dosage": ""
+   }
+}

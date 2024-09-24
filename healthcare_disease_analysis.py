@@ -10,16 +10,16 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 client = OpenAI(api_key=st.secrets["OPEN_AI_KEY"])
 
 
+# Function to read JSON data from a file
 def read_file(path):
     with open(path, 'r') as json_file:
         data = json.load(json_file)
     return data
 
 
+# Function to extract the numerical value from a percentage string
 def extract_number(value):
-    """
-    Extracts the number from a percentage string.
-    """
+
     percentage_pattern = r'(\d+(\.\d+)?)%'
     match = re.match(percentage_pattern, value.strip())
     if match:
@@ -28,13 +28,11 @@ def extract_number(value):
         return None
 
 
+# Cached function to query OpenAI and retrieve structured information about a disease
 @st.cache_data(show_spinner=False)
 def get_disease_info(name):
-    """
-    Function to query OpenAI and return structured information about a disease.
-    """
-
-    disease_template = read_file('disease_response_template.json')
+    # Load template that defines the expected format of the response
+    disease_template = read_file('./disease_response_template.json')
 
     response = client.chat.completions.create(
         model="gpt-4-turbo",
@@ -47,24 +45,26 @@ def get_disease_info(name):
     return content
 
 
+# Function to display detailed information about a disease
 def display_disease_info(disease):
     try:
         info = json.loads(disease)
-        # Statistics  Diagram
+
+        # Extract recovery and mortality rates for display
         recovery_rate = extract_number(info['statistics']["recovery_rate"])
         mortality_rate = extract_number(info['statistics']["mortality_rate"])
 
-        # Define the tabs you want to show based on conditions
+        # Define which tabs to display based on available information
         tabs = []
         if recovery_rate is not None and mortality_rate is not None:
             tabs.append("Statistics")
         tabs.append("Recovery")
         tabs.append("Medication")
 
-        # Create the tabs dynamically
+        # Dynamically create the tabs in the Streamlit UI
         tab_objects = st.tabs(tabs)
 
-        # Loop over the tabs to display content
+        # Display content based on selected tab
         for idx, tab_name in enumerate(tabs):
             with tab_objects[idx]:  # Match tab with content
                 if tab_name == "Statistics":
@@ -78,11 +78,12 @@ def display_disease_info(disease):
         st.error("Failed to decode the response into JSON. Please check the format of the OpenAI response.")
 
 
+# Function to display medication details
 def display_medication(medication):
-    # st.write("## Medication")
+
     st.subheader(f"{medication['name']}")
 
-    # Display side effects in a bullet point format using markdown
+    # Display side effects in a bullet point format
     st.write("#### Side Effects")
     st.markdown("\n".join([f"- {effect}" for effect in medication['side_effects']]))
 
@@ -93,55 +94,61 @@ def display_medication(medication):
     st.write("---")  # Add a divider
 
 
+# Function to display recovery options
 def display_recovery_options(recovery_options):
-    # st.write("## Recovery Options")
+    # Loop over recovery options and display each one with its description
     for option, description in recovery_options.items():
         st.subheader(option)
         st.markdown(f"* {description}")
 
 
+# Function to display statistics using a bar chart
 def display_statistics(recovery, mortality, name):
+    # Create a DataFrame for the chart data
     chart_data = pd.DataFrame(
         {
             "Recovery Rate": [recovery],
             "Mortality Rate": [mortality],
         },
-        index=["Rate"]  # This is a single index. You might adjust it based on your data structure.
+        index=["Rate"]
     )
 
     st.write(f"## Statistics for {name}")
-    st.bar_chart(chart_data)
+    st.bar_chart(chart_data) # Display the bar chart
 
 
+# Dialog to display JSON data in a Streamlit modal
 @st.dialog("OpenAI response", width="large")
 def display_json(data):
-    st.json(data)
+    st.json(data)   # Display JSON data in a formatted way
 
 
+# Function to show OpenAI response when a button is clicked
 def show_openai_response(openai_response):
     # Button to show JSON data
     if st.button('Show OpenAI response'):
         display_json(openai_response)
 
 
-
+# Main function to run the Streamlit app
 def main():
     st.title("Disease Information Dashboard")
 
-    # Text input to get the disease name from the user
+    # Input field for the user to enter the disease name
     disease_name = st.text_input("Enter the name of the disease:")
     disease_info = None
 
     if disease_name:
-        # Display a spinner while fetching the data
+        # Show a spinner while fetching the disease data
         with st.spinner(f"Fetching disease information for '{disease_name}' from OpenAI..."):
             disease_info = get_disease_info(disease_name)
 
     if disease_info:
-        # Display the OpenAI response
+        # Display the raw OpenAI response
         show_openai_response(disease_info)
         st.divider()
-        # Display more detailed disease info
+
+        # Display detailed disease information
         display_disease_info(disease_info)
     elif disease_name and not disease_info:
         st.error("No valid disease information found. Please try again.")
